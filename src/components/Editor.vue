@@ -1,116 +1,6 @@
 <template>
   <div>
     <div class="editor">
-      <div class="columns is-multiline is-centered">
-        <div class="column">
-          <b-field grouped group-multiline position="is-centered">
-            <!-- Tuning -->
-            <b-field label="Tuning">
-              <b-autocomplete
-                v-model="usr_tuning"
-                :data="tuning_search"
-                @select="(option) => (selected = option.name)"
-                group-field="instrument"
-                group-options="tunings"
-                open-on-focus
-                clearable
-                field="tuning"
-                icon="guitar"
-                style="min-width: 350px"
-                @input="saveSettings"
-              >
-                <template slot-scope="props">
-                  <div style="display: flex">
-                    <div style="flex: 1 1 0px">{{ props.option.name }}</div>
-                    <div style="flex: 1 1 0px">{{ props.option.tuning }}</div>
-                  </div>
-                </template>
-              </b-autocomplete>
-            </b-field>
-
-            <!-- Tonic + Scale -->
-            <b-field label="Tonic:">
-              <b-input
-                v-model="scale.tonic"
-                icon="music"
-                style="max-width: 100px"
-              ></b-input>
-            </b-field>
-            <b-field label="Scale:">
-              <b-autocomplete
-                v-model="scale.type"
-                :data="scale_search"
-                open-on-focus
-                clearable
-                append-to-body
-                @select="(option) => (selected = option)"
-              ></b-autocomplete>
-            </b-field>
-
-            <!-- Settings -->
-            <b-field>
-              <template slot="label">
-                <span style="color: transparent; user-select: none">More</span>
-              </template>
-
-              <b-dropdown append-to-body aria-role="menu" trap-focus>
-                <b-button class="button" slot="trigger" icon-left="cog"
-                  >Settings</b-button
-                >
-
-                <b-dropdown-item
-                  aria-role="menu-item"
-                  :focusable="false"
-                  custom
-                  paddingless
-                >
-                  <form action>
-                    <div class="modal-card" style="width: 300px">
-                      <section class="modal-card-body">
-                        <b-field label="Frets">
-                          <b-numberinput
-                            controls-position="compact"
-                            v-model.number="frets"
-                            min="1"
-                            max="200"
-                          ></b-numberinput>
-                        </b-field>
-                        <b-field label="Notation">
-                          <b-field>
-                            <b-radio-button
-                              v-model="sharps"
-                              native-value="sharps"
-                            >
-                              <span>#</span>
-                            </b-radio-button>
-
-                            <b-radio-button
-                              v-model="sharps"
-                              native-value="flats"
-                            >
-                              <span>b</span>
-                            </b-radio-button>
-                          </b-field>
-                        </b-field>
-                        <!-- <b-checkbox>Show piano</b-checkbox>-->
-                      </section>
-                      <footer class="modal-card-foot">
-                        <b-button
-                          @click="$emit('remove-fretboard')"
-                          icon-left="trash"
-                          >remove fretboard</b-button
-                        >
-                      </footer>
-                    </div>
-                  </form>
-                </b-dropdown-item>
-              </b-dropdown>
-            </b-field>
-            <!-- /Settings -->
-          </b-field>
-        </div>
-      </div>
-
       <div class="card-image" style="text-align: center; overflow-x: auto">
         <Fretboard
           :tuning="tuning"
@@ -126,12 +16,11 @@
 
 <script>
 import Fretboard from "./Fretboard.vue";
-// import NoteSelect from "./NoteSelect.vue";
 import { Note, Scale, Midi, ScaleType } from "@tonaljs/tonal";
 import { Tunings } from "../tunings.js";
 
-var ALL_SCALES = [];
-for (var scale of ScaleType.all()) {
+let ALL_SCALES = [];
+for (let scale of ScaleType.all()) {
   ALL_SCALES.push(scale.name);
   ALL_SCALES.push(...scale.aliases);
 }
@@ -141,15 +30,28 @@ export default {
 
   components: {
     Fretboard,
-    // NoteSelect,
   },
 
   data: function () {
+    const queryString = window.location.search;
+    const params = new URLSearchParams(queryString);
+    const queryParams = {};
+
+    for (const [key, value] of params.entries()) {
+      queryParams[key] = value;
+    }
+
+    const defaultUsrTuning = queryParams?.usrTuning || "E A D G B E";
+    const defaultSharps = queryParams?.sharps || "sharps";
+    const defaultFrets = queryParams?.frets || 18;
+    const defaultScaleTonic = queryParams?.scaleTonic || "A";
+    const defaultScaleType = queryParams?.scaleType || "minor pentatonic";
+
     return {
-      usr_tuning: localStorage.getItem("tuning") || "E A D G",
-      sharps: "sharps",
-      frets: 18,
-      scale: { tonic: "A", type: "minor pentatonic" },
+      usr_tuning: defaultUsrTuning,
+      sharps: defaultSharps,
+      frets: defaultFrets,
+      scale: { tonic: defaultScaleTonic, type: defaultScaleType },
     };
   },
 
@@ -195,10 +97,6 @@ export default {
   },
 
   methods: {
-    saveSettings() {
-      console.log("saving");
-      localStorage.setItem("tuning", this.usr_tuning);
-    },
     normalize(notes) {
       return notes.map((x) => x % 12);
     },
